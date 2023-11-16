@@ -1,0 +1,78 @@
+import json
+import requests
+from datetime import datetime
+
+j= 11
+start_time = datetime.now()
+with open(f'{j}.txt', 'r') as file:
+    c = file.readlines()
+
+result = ','.join(c)
+s  = result.split(',')
+# Удаление дубликатов
+unique_lines = set(s)
+# Преобразование обратно в список
+unique_lines_list = list(unique_lines)
+#print(unique_lines_list)
+lines = [line.strip() for line in unique_lines_list if line.strip() != 'the-void']
+print(len(lines))
+for address in lines:
+# URL с JSON-данными
+    try:
+        json_url = f'https://api.ton.cat/v2/contracts/address/{address}/transactions?limit=500'
+        response = requests.get(json_url)
+        print(json_url)
+    
+        if response.status_code == 200:
+        
+            data = response.json()
+        
+            processed_data = []
+            for entry in data:
+                processed_entry = {
+                    "account": entry["account"],
+                    "fee": entry["fee"],
+                    "hash": entry["hash"],
+                    "lt": entry["lt"],
+                    "utime": entry["utime"],
+                    "in_msg": {
+                        "source": str(entry["in_msg"]["source"]),
+                        "value": entry["in_msg"]["value"],
+                        "destination": entry["in_msg"]["destination"]
+                    },
+                    "out_msgs": {}
+                }
+                
+        
+                for out_msg in entry["out_msgs"]:
+                    processed_out_msg = {
+                        "source": out_msg["source"],
+                        "value": out_msg["value"],
+                        "destination": out_msg["destination"]
+                    }
+                    
+                    processed_entry["out_msgs"] = processed_out_msg
+                    
+                # Преобразование словаря в JSON-строку и добавление запятой после фигурной скобки
+                processed_data.append(json.dumps(processed_entry, indent=2) + ', ')
+            
+            # Запись новых данных в новый JSON-файл
+            with open(fr'C:\Users\artem\Desktop\{j}\{address}.json', 'w') as new_json_file:
+                new_json_file.write('{"result": [\n')
+                new_json_file.write(''.join(processed_data))
+                new_json_file.write('\n]}')  
+            with open(fr'C:\Users\artem\Desktop\{j}\{address}.json', 'r') as f:
+                data = f.read()
+                last_comma_index = data.rfind(',')
+                if last_comma_index != -1:
+                    data = data[:last_comma_index] + data[last_comma_index+1:]
+            with open(fr'C:\Users\artem\Desktop\{j}\{address}.json', 'w') as f:
+                f.write(data)        
+        else:
+            print(f"Ошибка при получении данных. Код статуса: {response.status_code}")       
+            
+    except: continue
+
+end_time = datetime.now()
+print('Время выполнения: {}'.format(end_time - start_time))
+
